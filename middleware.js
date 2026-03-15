@@ -4,9 +4,29 @@ import { jwtVerify } from "jose";
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-replace-in-production";
 
 export async function middleware(request) {
-  const token = request.cookies.get("token")?.value;
+  const { pathname, origin } = request.nextUrl;
 
-  const { pathname } = request.nextUrl;
+  // Simple CORS handling
+  const allowedOrigins = [
+    "https://tare-chat.vercel.app",
+    "http://localhost:3000"
+  ];
+
+  const res = NextResponse.next();
+
+  if (allowedOrigins.includes(origin)) {
+    res.headers.set("Access-Control-Allow-Origin", origin);
+    res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.headers.set("Access-Control-Allow-Credentials", "true");
+  }
+
+  // Handle preflight requests
+  if (request.method === "OPTIONS") {
+    return res;
+  }
+
+  const token = request.cookies.get("token")?.value;
 
   // Paths that are accessible without authentication
   if (pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/api/auth")) {
