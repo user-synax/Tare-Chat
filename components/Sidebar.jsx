@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Search, UserPlus, LogOut, MessageCircle } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import FriendList from "./FriendList";
 import GroupList from "./GroupList";
 import CreateGroupDialog from "./CreateGroupDialog";
+import AccountSection from "./AccountSection";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +20,7 @@ export default function Sidebar({ className }) {
   const [searchUsername, setSearchUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState({ username: "User" });
   const router = useRouter();
 
   const fetchFriends = async () => {
@@ -47,6 +50,12 @@ export default function Sidebar({ className }) {
   useEffect(() => {
     fetchFriends();
     fetchGroups();
+    
+    // Set user from localStorage after component mounts (client-side only)
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setCurrentUser({ username: storedUsername });
+    }
   }, []);
 
   const handleAddFriend = async (e) => {
@@ -111,15 +120,18 @@ export default function Sidebar({ className }) {
             </div>
             <h1 className="text-xl font-bold tracking-tight">Tare Chat</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            title="Logout"
-            className="hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center space-x-1">
+            <AccountSection />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+              className="h-10 w-10 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <form onSubmit={handleAddFriend} className="space-y-3">
@@ -168,6 +180,26 @@ export default function Sidebar({ className }) {
       <ScrollArea className="flex-1">
         <FriendList friends={friends} />
       </ScrollArea>
+
+      <Separator className="bg-border/50" />
+      
+      <div className="p-4 bg-card/40 backdrop-blur-md">
+        <div className="flex items-center space-x-3 px-2">
+          <Avatar className="h-10 w-10 border border-primary/20">
+            <AvatarFallback className="bg-primary/5 text-primary text-sm font-bold uppercase">
+              {currentUser.username.substring(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold truncate">
+              {currentUser.username}
+            </span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+              Online
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
