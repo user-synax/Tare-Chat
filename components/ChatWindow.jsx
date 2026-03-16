@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, ArrowLeft, Phone, Users, Video } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Phone, Users } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -17,7 +17,7 @@ import {
   answerCall, 
   endCurrentCall, 
   toggleMute,
-  toggleCamera
+  destroyPeer
 } from "@/lib/voice";
 import IncomingCallDialog from "./IncomingCallDialog";
 import VoiceCallModal from "./VoiceCallModal";
@@ -32,28 +32,30 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   
-  // Call states
+  // Voice states
   const [peer, setPeer] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callStatus, setCallStatus] = useState("idle"); // idle, calling, connected
   const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
-  const [isVideoCall, setIsVideoCall] = useState(false);
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
   
   const scrollRef = useRef(null);
+  const remoteAudioRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && currentUserId && !isGroup) {
       const p = initPeer(currentUserId);
       setPeer(p);
 
-      p.on('call', (call) => {
-        // Metadata in peer ID or separate signaling would be better, 
-        // but for now we'll assume it's a video call if it has a video track
+      const handleCall = (call) => {
         setIncomingCall(call);
-      });
+      };
+
+      p.on('call', handleCall);
+
+      return () => {
+        p.off('call', handleCall);
+        destroyPeer();
+      };
     }
   }, [currentUserId, isGroup]);
 
@@ -121,7 +123,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!text.trim() || sending) return;
+    if (!text.trim() || sending || !friendId) return;
 
     setSending(true);
     try {
@@ -129,14 +131,23 @@ export default function ChatWindow({ friendId, currentUserId }) {
         ? { groupId: friendId, text } 
         : { receiverId: friendId, text };
 
+      console.log("Sending message with body:", body);
+
       const res = await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      
+      const data = await res.json();
+      
       if (res.ok) {
         setText("");
-        fetchMessages();
+        // Optimistically add the message to the list
+        setMessages(prev => [...prev, data.message]);
+      } else {
+        console.error("Failed to send message:", data.error);
+        alert(`Failed to send message: ${data.error}`);
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -145,14 +156,14 @@ export default function ChatWindow({ friendId, currentUserId }) {
     }
   };
 
-  const handleStartCall = async (video = false) => {
+  const handleStartCall = async () => {
     setCallStatus("calling");
-    setIsVideoCall(video);
     try {
-      const stream = await startLocalStream(video);
-      setLocalStream(stream);
-      callUser(friendId, stream, (rStream) => {
-        setRemoteStream(rStream);
+      const stream = await startLocalStream();
+      callUser(friendId, stream, (remoteStream) => {
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
+        }
         setCallStatus("connected");
       });
     } catch (err) {
@@ -164,14 +175,11 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const handleAcceptCall = async () => {
     setCallStatus("connected");
     try {
-      // Check if incoming call has video
-      const hasVideo = incomingCall.options?.metadata?.video || false;
-      setIsVideoCall(hasVideo);
-      
-      const stream = await startLocalStream(hasVideo);
-      setLocalStream(stream);
-      answerCall(incomingCall, stream, (rStream) => {
-        setRemoteStream(rStream);
+      const stream = await startLocalStream();
+      answerCall(incomingCall, stream, (remoteStream) => {
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
+        }
       });
       setIncomingCall(null);
     } catch (err) {
@@ -191,18 +199,11 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const handleEndCall = () => {
     endCurrentCall();
     setCallStatus("idle");
-    setLocalStream(null);
-    setRemoteStream(null);
   };
 
   const handleToggleMute = () => {
     const muted = toggleMute();
     setIsMuted(muted);
-  };
-
-  const handleToggleCamera = () => {
-    const cameraOff = toggleCamera();
-    setIsCameraOff(cameraOff);
   };
 
   if (loading) {
@@ -218,12 +219,13 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background/50 relative">
+      <audio ref={remoteAudioRef} autoPlay />
+
       {incomingCall && (
         <IncomingCallDialog 
           callerName={incomingCall.peer.replace('tare-chat-', '')} 
           onAccept={handleAcceptCall}
           onReject={handleRejectCall}
-          isVideo={incomingCall.options?.metadata?.video}
         />
       )}
 
@@ -232,13 +234,8 @@ export default function ChatWindow({ friendId, currentUserId }) {
           friend={friend}
           status={callStatus}
           isMuted={isMuted}
-          isCameraOff={isCameraOff}
-          isVideoCall={isVideoCall}
           onEnd={handleEndCall}
           onMute={handleToggleMute}
-          onToggleCamera={handleToggleCamera}
-          localStream={localStream}
-          remoteStream={remoteStream}
         />
       )}
 
@@ -271,24 +268,14 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
         <div className="flex items-center space-x-2">
           {!isGroup && (
-            <>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-                onClick={() => handleStartCall(false)}
-              >
-                <Phone className="h-5 w-5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-                onClick={() => handleStartCall(true)}
-              >
-                <Video className="h-5 w-5" />
-              </Button>
-            </>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+              onClick={handleStartCall}
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
           )}
         </div>
       </div>
@@ -300,7 +287,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
             <MessageBubble
               key={msg._id}
               message={msg}
-              isOwn={msg.senderId === currentUserId}
+              isOwn={msg.senderId === currentUserId || (msg.senderId?._id === currentUserId) || (typeof msg.senderId === 'string' && msg.senderId === currentUserId)}
             />
           ))}
           <div ref={scrollRef} className="h-4" />
@@ -308,31 +295,23 @@ export default function ChatWindow({ friendId, currentUserId }) {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-6 bg-transparent">
-        <form
-          onSubmit={handleSend}
-          className="relative flex items-center space-x-3 bg-card/30 backdrop-blur-xl border border-border/50 p-2 rounded-2xl shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/20"
-        >
-          <Input
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="flex-1 h-12 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base"
-          />
+      <div className="p-6 bg-card/20 backdrop-blur-md border-t border-border/50">
+        <form onSubmit={handleSend} className="flex items-center space-x-3 max-w-4xl mx-auto">
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Type your message..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="h-12 bg-background/50 border-border/50 pr-12 focus:ring-primary/20 transition-all rounded-xl"
+            />
+          </div>
           <Button
             type="submit"
-            disabled={!text.trim() || sending}
             size="icon"
-            className={cn(
-              "h-12 w-12 rounded-xl transition-all duration-300",
-              text.trim() ? "bg-primary shadow-lg shadow-primary/20 translate-y-[-2px]" : "bg-muted"
-            )}
+            className="h-12 w-12 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            disabled={sending || !text.trim()}
           >
-            {sending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
+            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </Button>
         </form>
       </div>

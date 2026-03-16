@@ -30,11 +30,9 @@ const MessageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-MessageSchema.pre('save', function(next) {
+MessageSchema.pre('validate', function() {
   if (!this.receiverId && !this.groupId) {
-    next(new Error('Message must have a receiverId or a groupId.'));
-  } else {
-    next();
+    throw new Error('Message must have a receiverId or a groupId.');
   }
 });
 
