@@ -21,6 +21,7 @@ import {
 } from "@/lib/voice";
 import IncomingCallDialog from "./IncomingCallDialog";
 import VoiceCallModal from "./VoiceCallModal";
+import Pusher from "pusher-js";
 
 export default function ChatWindow({ friendId, currentUserId }) {
   const searchParams = useSearchParams();
@@ -40,6 +41,40 @@ export default function ChatWindow({ friendId, currentUserId }) {
   
   const scrollRef = useRef(null);
   const remoteAudioRef = useRef(null);
+
+  // --- Pusher Real-time logic ---
+  useEffect(() => {
+    if (!currentUserId || !friendId) return;
+
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+    });
+
+    // Channel name must match the server-side logic
+    const channelName = isGroup 
+      ? `group-${friendId}` 
+      : `chat-${[currentUserId, friendId].sort().join('-')}`;
+
+    const channel = pusher.subscribe(channelName);
+
+    channel.bind("new-message", (newMessage) => {
+      console.log("Pusher: New message received", newMessage._id);
+      setMessages((prev) => {
+        // Check if message already exists in state (to avoid duplicates from optimistic updates)
+        const exists = prev.some((m) => m._id.toString() === newMessage._id.toString());
+        if (exists) {
+          console.log("Pusher: Message already exists, skipping", newMessage._id);
+          return prev;
+        }
+        return [...prev, newMessage];
+      });
+    });
+
+    return () => {
+      pusher.unsubscribe(channelName);
+      pusher.disconnect();
+    };
+  }, [currentUserId, friendId, isGroup]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && currentUserId && !isGroup) {
@@ -106,13 +141,6 @@ export default function ChatWindow({ friendId, currentUserId }) {
   useEffect(() => {
     fetchMessages(true);
     fetchFriendInfo();
-
-    // Polling every 2 seconds
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 2000);
-
-    return () => clearInterval(interval);
   }, [friendId, isGroup]);
 
   useEffect(() => {
@@ -144,7 +172,12 @@ export default function ChatWindow({ friendId, currentUserId }) {
       if (res.ok) {
         setText("");
         // Optimistically add the message to the list
-        setMessages(prev => [...prev, data.message]);
+        const newMessage = data.message;
+        setMessages((prev) => {
+          const exists = prev.some((m) => m._id.toString() === newMessage._id.toString());
+          if (exists) return prev;
+          return [...prev, newMessage];
+        });
       } else {
         console.error("Failed to send message:", data.error);
         alert(`Failed to send message: ${data.error}`);

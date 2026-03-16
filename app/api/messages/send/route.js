@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { sendPushNotification } from "@/lib/push";
+import { pusherServer } from "@/lib/pusher";
 
 export async function POST(req) {
   try {
@@ -53,7 +54,19 @@ export async function POST(req) {
       .populate("receiverId", "username")
       .populate("groupId", "name");
 
-    // Send push notifications
+    // --- Real-time updates with Pusher ---
+    if (receiverId) {
+      // Direct message: trigger on a channel unique to this pair of users
+      // We sort the IDs to ensure both users use the same channel name
+      const sortedIds = [session.userId, receiverId].sort();
+      const channelName = `chat-${sortedIds[0]}-${sortedIds[1]}`;
+      await pusherServer.trigger(channelName, "new-message", populatedMessage);
+    } else if (groupId) {
+      // Group message: trigger on the group's channel
+      await pusherServer.trigger(`group-${groupId}`, "new-message", populatedMessage);
+    }
+
+    // Send push notifications (Background)
     if (receiverId) {
       const receiver = await User.findById(receiverId);
       if (receiver && receiver.pushSubscriptions?.length > 0) {
