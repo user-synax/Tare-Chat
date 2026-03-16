@@ -11,19 +11,42 @@ export async function GET(req, { params }) {
     }
 
     const { friendId } = await params;
+    const { searchParams } = new URL(req.url);
+    const isGroup = searchParams.get('isGroup') === 'true';
+
     if (!friendId) {
-      return NextResponse.json({ error: "Friend ID is required" }, { status: 400 });
+      return NextResponse.json({ error: "Conversation ID is required" }, { status: 400 });
     }
 
     await connectDB();
 
-    // Fetch messages between current user and friend
-    const messages = await Message.find({
-      $or: [
-        { senderId: session.userId, receiverId: friendId },
-        { senderId: friendId, receiverId: session.userId },
-      ],
-    }).sort({ createdAt: 1 });
+    let messages;
+    if (isGroup) {
+      messages = await Message.find({ groupId: friendId })
+        .populate("senderId", "username")
+        .sort({ createdAt: 1 });
+    } else {
+      messages = await Message.find({
+        $or: [
+          { senderId: session.userId, receiverId: friendId },
+          { senderId: friendId, receiverId: session.userId },
+        ],
+      })
+        .populate("senderId", "username")
+        .sort({ createdAt: 1 });
+    }
+
+    // Mark messages as read
+    const unreadMessageIds = messages
+      .filter(msg => msg.senderId.toString() !== session.userId && !msg.readBy.includes(session.userId))
+      .map(msg => msg._id);
+
+    if (unreadMessageIds.length > 0) {
+      await Message.updateMany(
+        { _id: { $in: unreadMessageIds } },
+        { $addToSet: { readBy: session.userId } }
+      );
+    }
 
     return NextResponse.json({ messages }, { status: 200 });
   } catch (error) {

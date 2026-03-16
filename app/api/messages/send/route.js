@@ -10,18 +10,26 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { receiverId, text } = await req.json();
-    if (!receiverId || !text) {
-      return NextResponse.json({ error: "Receiver and text are required" }, { status: 400 });
+    const { receiverId, groupId, text } = await req.json();
+    if ((!receiverId && !groupId) || !text) {
+      return NextResponse.json({ error: "Receiver/Group and text are required" }, { status: 400 });
     }
 
     await connectDB();
 
-    const message = await Message.create({
+    const messageData = {
       senderId: session.userId,
-      receiverId,
       text,
-    });
+      readBy: [session.userId] // Sender has always read the message
+    };
+
+    if (receiverId) {
+      messageData.receiverId = receiverId;
+    } else {
+      messageData.groupId = groupId;
+    }
+
+    const message = await Message.create(messageData);
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {

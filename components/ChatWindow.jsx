@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, ArrowLeft, Phone, PhoneOff } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Phone, Users } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -21,6 +22,9 @@ import IncomingCallDialog from "./IncomingCallDialog";
 import VoiceCallModal from "./VoiceCallModal";
 
 export default function ChatWindow({ friendId, currentUserId }) {
+  const searchParams = useSearchParams();
+  const isGroup = searchParams.get("isGroup") === "true";
+  
   const [messages, setMessages] = useState([]);
   const [friend, setFriend] = useState(null);
   const [text, setText] = useState("");
@@ -37,7 +41,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const remoteAudioRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && currentUserId) {
+    if (typeof window !== "undefined" && currentUserId && !isGroup) {
       const p = initPeer(currentUserId);
       setPeer(p);
 
@@ -45,12 +49,12 @@ export default function ChatWindow({ friendId, currentUserId }) {
         setIncomingCall(call);
       });
     }
-  }, [currentUserId]);
+  }, [currentUserId, isGroup]);
 
   const fetchMessages = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      const res = await fetch(`/api/messages/${friendId}`);
+      const res = await fetch(`/api/messages/${friendId}${isGroup ? "?isGroup=true" : ""}`);
       const data = await res.json();
       if (res.ok) {
         setMessages(data.messages);
@@ -64,11 +68,27 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
   const fetchFriendInfo = async () => {
     try {
-      const res = await fetch("/api/friends/list");
-      const data = await res.json();
-      if (res.ok) {
-        const found = data.friends.find((f) => f._id === friendId);
-        setFriend(found);
+      if (isGroup) {
+        const res = await fetch("/api/groups/list");
+        const data = await res.json();
+        if (res.ok) {
+          const found = data.groups.find((g) => g._id === friendId);
+          if (found) {
+            setFriend({
+              _id: found._id,
+              username: found.name,
+              isGroup: true,
+              members: found.members
+            });
+          }
+        }
+      } else {
+        const res = await fetch("/api/friends/list");
+        const data = await res.json();
+        if (res.ok) {
+          const found = data.friends.find((f) => f._id === friendId);
+          setFriend(found);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch friend info:", err);
@@ -85,7 +105,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [friendId]);
+  }, [friendId, isGroup]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -99,10 +119,14 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
     setSending(true);
     try {
+      const body = isGroup 
+        ? { groupId: friendId, text } 
+        : { receiverId: friendId, text };
+
       const res = await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiverId: friendId, text }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         setText("");
@@ -206,7 +230,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
           </Link>
           <Avatar className="h-12 w-12 border-2 border-primary/10 shadow-sm ring-1 ring-border">
             <AvatarFallback className="bg-primary text-primary-foreground text-base font-bold uppercase">
-              {friend?.username?.substring(0, 2)}
+              {isGroup ? <Users className="h-6 w-6" /> : friend?.username?.substring(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
@@ -214,23 +238,28 @@ export default function ChatWindow({ friendId, currentUserId }) {
               {friend?.username}
             </h2>
             <div className="flex items-center space-x-1.5">
-              <span className="h-2 w-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50" />
+              <span className={cn(
+                "h-2 w-2 rounded-full shadow-sm",
+                isGroup ? "bg-primary" : "bg-green-500 shadow-green-500/50"
+              )} />
               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                Online
+                {isGroup ? `${friend?.members?.length || 0} Members` : "Online"}
               </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-            onClick={handleStartCall}
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
+          {!isGroup && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+              onClick={handleStartCall}
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
 

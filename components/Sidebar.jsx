@@ -7,11 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Search, UserPlus, LogOut, MessageCircle } from "lucide-react";
 import FriendList from "./FriendList";
+import GroupList from "./GroupList";
+import CreateGroupDialog from "./CreateGroupDialog";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export default function Sidebar({ className }) {
   const [friends, setFriends] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [searchUsername, setSearchUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,8 +32,21 @@ export default function Sidebar({ className }) {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const res = await fetch("/api/groups/list");
+      const data = await res.json();
+      if (res.ok) {
+        setGroups(data.groups);
+      }
+    } catch (err) {
+      console.error("Failed to fetch groups:", err);
+    }
+  };
+
   useEffect(() => {
     fetchFriends();
+    fetchGroups();
   }, []);
 
   const handleAddFriend = async (e) => {
@@ -56,6 +72,21 @@ export default function Sidebar({ className }) {
       setError("Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateGroup = async (name, members) => {
+    try {
+      const res = await fetch("/api/groups/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, members }),
+      });
+      if (res.ok) {
+        fetchGroups();
+      }
+    } catch (err) {
+      console.error("Failed to create group:", err);
     }
   };
 
@@ -115,9 +146,22 @@ export default function Sidebar({ className }) {
 
       <Separator className="bg-border/50" />
 
+      <div className="px-4 py-4 flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-2">
+          Groups
+        </p>
+        <CreateGroupDialog friends={friends} onCreate={handleCreateGroup} />
+      </div>
+
+      <ScrollArea className="h-48">
+        <GroupList groups={groups} />
+      </ScrollArea>
+
+      <Separator className="bg-border/50" />
+
       <div className="px-4 py-4">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-2 mb-2">
-          Messages
+          Friends
         </p>
       </div>
 
