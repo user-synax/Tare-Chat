@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, ArrowLeft, Phone, Users } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Phone, Users, Video } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -16,7 +16,8 @@ import {
   callUser, 
   answerCall, 
   endCurrentCall, 
-  toggleMute 
+  toggleMute,
+  toggleCamera
 } from "@/lib/voice";
 import IncomingCallDialog from "./IncomingCallDialog";
 import VoiceCallModal from "./VoiceCallModal";
@@ -31,14 +32,17 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   
-  // Voice states
+  // Call states
   const [peer, setPeer] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callStatus, setCallStatus] = useState("idle"); // idle, calling, connected
   const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+  const [isVideoCall, setIsVideoCall] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
   
   const scrollRef = useRef(null);
-  const remoteAudioRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && currentUserId && !isGroup) {
@@ -46,6 +50,8 @@ export default function ChatWindow({ friendId, currentUserId }) {
       setPeer(p);
 
       p.on('call', (call) => {
+        // Metadata in peer ID or separate signaling would be better, 
+        // but for now we'll assume it's a video call if it has a video track
         setIncomingCall(call);
       });
     }
@@ -139,14 +145,14 @@ export default function ChatWindow({ friendId, currentUserId }) {
     }
   };
 
-  const handleStartCall = async () => {
+  const handleStartCall = async (video = false) => {
     setCallStatus("calling");
+    setIsVideoCall(video);
     try {
-      const stream = await startLocalStream();
-      callUser(friendId, stream, (remoteStream) => {
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remoteStream;
-        }
+      const stream = await startLocalStream(video);
+      setLocalStream(stream);
+      callUser(friendId, stream, (rStream) => {
+        setRemoteStream(rStream);
         setCallStatus("connected");
       });
     } catch (err) {
@@ -158,11 +164,14 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const handleAcceptCall = async () => {
     setCallStatus("connected");
     try {
-      const stream = await startLocalStream();
-      answerCall(incomingCall, stream, (remoteStream) => {
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remoteStream;
-        }
+      // Check if incoming call has video
+      const hasVideo = incomingCall.options?.metadata?.video || false;
+      setIsVideoCall(hasVideo);
+      
+      const stream = await startLocalStream(hasVideo);
+      setLocalStream(stream);
+      answerCall(incomingCall, stream, (rStream) => {
+        setRemoteStream(rStream);
       });
       setIncomingCall(null);
     } catch (err) {
@@ -182,11 +191,18 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const handleEndCall = () => {
     endCurrentCall();
     setCallStatus("idle");
+    setLocalStream(null);
+    setRemoteStream(null);
   };
 
   const handleToggleMute = () => {
     const muted = toggleMute();
     setIsMuted(muted);
+  };
+
+  const handleToggleCamera = () => {
+    const cameraOff = toggleCamera();
+    setIsCameraOff(cameraOff);
   };
 
   if (loading) {
@@ -202,13 +218,12 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background/50 relative">
-      <audio ref={remoteAudioRef} autoPlay />
-
       {incomingCall && (
         <IncomingCallDialog 
           callerName={incomingCall.peer.replace('tare-chat-', '')} 
           onAccept={handleAcceptCall}
           onReject={handleRejectCall}
+          isVideo={incomingCall.options?.metadata?.video}
         />
       )}
 
@@ -217,8 +232,13 @@ export default function ChatWindow({ friendId, currentUserId }) {
           friend={friend}
           status={callStatus}
           isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          isVideoCall={isVideoCall}
           onEnd={handleEndCall}
           onMute={handleToggleMute}
+          onToggleCamera={handleToggleCamera}
+          localStream={localStream}
+          remoteStream={remoteStream}
         />
       )}
 
@@ -251,14 +271,24 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
         <div className="flex items-center space-x-2">
           {!isGroup && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-              onClick={handleStartCall}
-            >
-              <Phone className="h-5 w-5" />
-            </Button>
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+                onClick={() => handleStartCall(false)}
+              >
+                <Phone className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+                onClick={() => handleStartCall(true)}
+              >
+                <Video className="h-5 w-5" />
+              </Button>
+            </>
           )}
         </div>
       </div>
