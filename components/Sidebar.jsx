@@ -115,7 +115,7 @@ export default function Sidebar({ className }) {
       <div className="p-6">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+            <div className="p-2 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:scale-110 duration-300">
               <MessageCircle className="h-5 w-5" />
             </div>
             <h1 className="text-xl font-bold tracking-tight">Tare Chat</h1>

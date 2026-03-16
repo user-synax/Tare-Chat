@@ -4,48 +4,48 @@
 
 @layer base {
   :root {
-    --background: 60 4.8% 95.9%; /* Olive Light Base */
-    --foreground: 20 14.3% 4.1%;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
-    --primary: 84 81% 44%; /* Lime Theme Primary */
-    --primary-foreground: 84 100% 97%;
-    --secondary: 60 4.8% 90%;
-    --secondary-foreground: 24 9.8% 10%;
-    --muted: 60 4.8% 90%;
-    --muted-foreground: 25 5.3% 44.7%;
-    --accent: 84 81% 44%;
-    --accent-foreground: 84 100% 97%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 262 83% 58%; /* Violet Theme Primary */
+    --primary-foreground: 210 20% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 262 83% 58%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 60 4.8% 95.9%;
-    --border: 20 5.9% 90%;
-    --input: 20 5.9% 90%;
-    --ring: 84 81% 44%;
-    --radius: 0.75rem;
+    --destructive-foreground: 210 20% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 262 83% 58%;
+    --radius: 0.25rem; /* 4px small radius */
   }
 
   .dark {
-    --background: 60 9.1% 9.8%; /* Olive Dark Base */
-    --foreground: 60 4.8% 95.9%;
-    --card: 60 9.1% 12%;
-    --card-foreground: 60 4.8% 95.9%;
-    --popover: 60 9.1% 12%;
-    --popover-foreground: 60 4.8% 95.9%;
-    --primary: 84 81% 54%; /* Lime Theme Dark Primary */
-    --primary-foreground: 84 100% 5%;
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 60 4.8% 95.9%;
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
-    --accent: 84 81% 54%;
-    --accent-foreground: 84 100% 5%;
+    --background: 240 6% 10%; /* Off Black Base */
+    --foreground: 0 0% 98%;
+    --card: 240 6% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 6% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 263 70% 50%; /* Violet Theme Dark Primary */
+    --primary-foreground: 210 20% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 263 70% 50%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 60 4.8% 95.9%;
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 84 81% 54%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 18%;
+    --input: 240 3.7% 18%;
+    --ring: 263 70% 50%;
   }
 }
 

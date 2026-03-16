@@ -27,8 +27,8 @@ export default function GroupList({ groups }) {
           <Link key={group._id} href={`/chat/${group._id}?isGroup=true`}>
             <div
               className={cn(
-                "flex items-center justify-between p-3 rounded-lg transition-all cursor-pointer hover:bg-accent/50 group",
-                isActive ? "bg-accent" : "bg-transparent"
+                "flex items-center justify-between p-3 rounded-lg transition-all cursor-pointer hover:bg-accent/50 hover:translate-x-1 group",
+                isActive ? "bg-accent shadow-sm" : "bg-transparent"
               )}
             >
               <div className="flex items-center space-x-3">

@@ -302,13 +302,13 @@ export default function ChatWindow({ friendId, currentUserId }) {
               placeholder="Type your message..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="h-12 bg-background/50 border-border/50 pr-12 focus:ring-primary/20 transition-all rounded-xl"
+              className="h-12 bg-background/50 border-border/50 pr-12 focus:ring-primary/20 transition-all rounded-lg"
             />
           </div>
           <Button
             type="submit"
             size="icon"
-            className="h-12 w-12 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            className="h-12 w-12 rounded-lg shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
             disabled={sending || !text.trim()}
           >
             {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
