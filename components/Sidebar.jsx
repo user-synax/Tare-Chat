@@ -9,6 +9,7 @@ import { Search, UserPlus, LogOut, MessageCircle } from "lucide-react";
 import FriendList from "./FriendList";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { initSocket, disconnectSocket } from "@/lib/socket-client";
 
 export default function Sidebar({ className }) {
   const [friends, setFriends] = useState([]);
@@ -16,6 +17,19 @@ export default function Sidebar({ className }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      initSocket(userId);
+    }
+    
+    return () => {
+      // We don't necessarily want to disconnect when sidebar unmounts 
+      // as it might just be a navigation. 
+      // But we should clean up if the app itself unmounts (though it's a SPA)
+    };
+  }, []);
 
   const fetchFriends = async () => {
     try {
@@ -62,6 +76,9 @@ export default function Sidebar({ className }) {
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      disconnectSocket();
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
       router.push("/login");
     } catch (err) {
       console.error("Logout failed:", err);
