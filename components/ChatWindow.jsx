@@ -4,11 +4,21 @@ import { useEffect, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, ArrowLeft } from "lucide-react";
+import { Send, Loader2, ArrowLeft, Phone, PhoneOff } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { 
+  initPeer, 
+  startLocalStream, 
+  callUser, 
+  answerCall, 
+  endCurrentCall, 
+  toggleMute 
+} from "@/lib/voice";
+import IncomingCallDialog from "./IncomingCallDialog";
+import VoiceCallModal from "./VoiceCallModal";
 
 export default function ChatWindow({ friendId, currentUserId }) {
   const [messages, setMessages] = useState([]);
@@ -16,7 +26,26 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  
+  // Voice states
+  const [peer, setPeer] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [callStatus, setCallStatus] = useState("idle"); // idle, calling, connected
+  const [isMuted, setIsMuted] = useState(false);
+  
   const scrollRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && currentUserId) {
+      const p = initPeer(currentUserId);
+      setPeer(p);
+
+      p.on('call', (call) => {
+        setIncomingCall(call);
+      });
+    }
+  }, [currentUserId]);
 
   const fetchMessages = async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -86,6 +115,56 @@ export default function ChatWindow({ friendId, currentUserId }) {
     }
   };
 
+  const handleStartCall = async () => {
+    setCallStatus("calling");
+    try {
+      const stream = await startLocalStream();
+      callUser(friendId, stream, (remoteStream) => {
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
+        }
+        setCallStatus("connected");
+      });
+    } catch (err) {
+      console.error("Failed to start call:", err);
+      setCallStatus("idle");
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    setCallStatus("connected");
+    try {
+      const stream = await startLocalStream();
+      answerCall(incomingCall, stream, (remoteStream) => {
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
+        }
+      });
+      setIncomingCall(null);
+    } catch (err) {
+      console.error("Failed to accept call:", err);
+      setCallStatus("idle");
+      setIncomingCall(null);
+    }
+  };
+
+  const handleRejectCall = () => {
+    if (incomingCall) {
+      incomingCall.close();
+      setIncomingCall(null);
+    }
+  };
+
+  const handleEndCall = () => {
+    endCurrentCall();
+    setCallStatus("idle");
+  };
+
+  const handleToggleMute = () => {
+    const muted = toggleMute();
+    setIsMuted(muted);
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background/50">
@@ -99,6 +178,26 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background/50 relative">
+      <audio ref={remoteAudioRef} autoPlay />
+
+      {incomingCall && (
+        <IncomingCallDialog 
+          callerName={incomingCall.peer.replace('tare-chat-', '')} 
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {callStatus !== "idle" && (
+        <VoiceCallModal 
+          friend={friend}
+          status={callStatus}
+          isMuted={isMuted}
+          onEnd={handleEndCall}
+          onMute={handleToggleMute}
+        />
+      )}
+
       {/* Top Bar */}
       <div className="h-20 border-b border-border/50 bg-card/20 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center space-x-4">
@@ -121,6 +220,17 @@ export default function ChatWindow({ friendId, currentUserId }) {
               </span>
             </div>
           </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+            onClick={handleStartCall}
+          >
+            <Phone className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
