@@ -33,7 +33,7 @@ export async function POST(req) {
       );
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.username);
 
     const response = NextResponse.json(
       { message: "Login successful", userId: user._id, username: user.username },

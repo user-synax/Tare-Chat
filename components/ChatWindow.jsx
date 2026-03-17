@@ -10,14 +10,14 @@ import MessageBubble from "./MessageBubble";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { 
-  initPeer, 
-  startLocalStream, 
-  callUser, 
-  answerCall, 
-  endCurrentCall, 
+import {
+  initPeer,
+  startLocalStream,
+  callUser,
+  answerCall,
+  endCurrentCall,
   toggleMute,
-  destroyPeer
+  destroyPeer,
 } from "@/lib/voice";
 import IncomingCallDialog from "./IncomingCallDialog";
 import VoiceCallModal from "./VoiceCallModal";
@@ -26,19 +26,22 @@ import Pusher from "pusher-js";
 export default function ChatWindow({ friendId, currentUserId }) {
   const searchParams = useSearchParams();
   const isGroup = searchParams.get("isGroup") === "true";
-  
+
   const [messages, setMessages] = useState([]);
   const [friend, setFriend] = useState(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  
+  const [typingUsers, setTypingUsers] = useState({});
+  const typingTimeoutRef = useRef(null);
+  const isTypingRef = useRef(false);
+
   // Voice states
   const [peer, setPeer] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
-  const [callStatus, setCallStatus] = useState("idle"); // idle, calling, connected
+  const [callStatus, setCallStatus] = useState("idle");
   const [isMuted, setIsMuted] = useState(false);
-  
+
   const scrollRef = useRef(null);
   const remoteAudioRef = useRef(null);
 
@@ -50,23 +53,35 @@ export default function ChatWindow({ friendId, currentUserId }) {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
     });
 
-    // Channel name must match the server-side logic
-    const channelName = isGroup 
-      ? `group-${friendId}` 
-      : `chat-${[currentUserId, friendId].sort().join('-')}`;
+    const channelName = isGroup
+      ? `group-${friendId}`
+      : `chat-${[currentUserId, friendId].sort().join("-")}`;
 
     const channel = pusher.subscribe(channelName);
 
     channel.bind("new-message", (newMessage) => {
-      console.log("Pusher: New message received", newMessage._id);
       setMessages((prev) => {
-        // Check if message already exists in state (to avoid duplicates from optimistic updates)
-        const exists = prev.some((m) => m._id.toString() === newMessage._id.toString());
+        const exists = prev.some(
+          (m) => m._id.toString() === newMessage._id.toString()
+        );
         if (exists) {
-          console.log("Pusher: Message already exists, skipping", newMessage._id);
           return prev;
         }
         return [...prev, newMessage];
+      });
+    });
+
+    channel.bind("typing", (data) => {
+      if (data.userId === currentUserId) return;
+
+      setTypingUsers((prev) => {
+        const newTypingUsers = { ...prev };
+        if (data.isTyping) {
+          newTypingUsers[data.userId] = data.username;
+        } else {
+          delete newTypingUsers[data.userId];
+        }
+        return newTypingUsers;
       });
     });
 
@@ -85,10 +100,10 @@ export default function ChatWindow({ friendId, currentUserId }) {
         setIncomingCall(call);
       };
 
-      p.on('call', handleCall);
+      p.on("call", handleCall);
 
       return () => {
-        p.off('call', handleCall);
+        p.off("call", handleCall);
         destroyPeer();
       };
     }
@@ -97,13 +112,14 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const fetchMessages = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      const res = await fetch(`/api/messages/${friendId}${isGroup ? "?isGroup=true" : ""}`);
+      const res = await fetch(
+        `/api/messages/${friendId}${isGroup ? "?isGroup=true" : ""}`
+      );
       const data = await res.json();
       if (res.ok) {
         setMessages(data.messages);
       }
     } catch (err) {
-      console.error("Failed to fetch messages:", err);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -121,7 +137,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
               _id: found._id,
               username: found.name,
               isGroup: true,
-              members: found.members
+              members: found.members,
             });
           }
         }
@@ -134,7 +150,6 @@ export default function ChatWindow({ friendId, currentUserId }) {
         }
       }
     } catch (err) {
-      console.error("Failed to fetch friend info:", err);
     }
   };
 
@@ -147,43 +162,73 @@ export default function ChatWindow({ friendId, currentUserId }) {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, typingUsers]);
+
+  const emitTyping = async (isTyping) => {
+    if (!friendId || isTypingRef.current === isTyping) return;
+
+    isTypingRef.current = isTyping;
+    try {
+      await fetch("/api/messages/typing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          isGroup
+            ? { groupId: friendId, isTyping }
+            : { receiverId: friendId, isTyping }
+        ),
+      });
+    } catch (err) {
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setText(e.target.value);
+
+    emitTyping(true);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      emitTyping(false);
+    }, 2000);
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!text.trim() || sending || !friendId) return;
 
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    emitTyping(false);
+
     setSending(true);
     try {
-      const body = isGroup 
-        ? { groupId: friendId, text } 
+      const body = isGroup
+        ? { groupId: friendId, text }
         : { receiverId: friendId, text };
-
-      console.log("Sending message with body:", body);
 
       const res = await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         setText("");
-        // Optimistically add the message to the list
         const newMessage = data.message;
         setMessages((prev) => {
-          const exists = prev.some((m) => m._id.toString() === newMessage._id.toString());
+          const exists = prev.some(
+            (m) => m._id.toString() === newMessage._id.toString()
+          );
           if (exists) return prev;
           return [...prev, newMessage];
         });
       } else {
-        console.error("Failed to send message:", data.error);
         alert(`Failed to send message: ${data.error}`);
       }
     } catch (err) {
-      console.error("Failed to send message:", err);
     } finally {
       setSending(false);
     }
@@ -200,7 +245,6 @@ export default function ChatWindow({ friendId, currentUserId }) {
         setCallStatus("connected");
       });
     } catch (err) {
-      console.error("Failed to start call:", err);
       setCallStatus("idle");
     }
   };
@@ -216,7 +260,6 @@ export default function ChatWindow({ friendId, currentUserId }) {
       });
       setIncomingCall(null);
     } catch (err) {
-      console.error("Failed to accept call:", err);
       setCallStatus("idle");
       setIncomingCall(null);
     }
@@ -255,15 +298,15 @@ export default function ChatWindow({ friendId, currentUserId }) {
       <audio ref={remoteAudioRef} autoPlay />
 
       {incomingCall && (
-        <IncomingCallDialog 
-          callerName={incomingCall.peer.replace('tare-chat-', '')} 
+        <IncomingCallDialog
+          callerName={incomingCall.peer.replace("tare-chat-", "")}
           onAccept={handleAcceptCall}
           onReject={handleRejectCall}
         />
       )}
 
       {callStatus !== "idle" && (
-        <VoiceCallModal 
+        <VoiceCallModal
           friend={friend}
           status={callStatus}
           isMuted={isMuted}
@@ -275,12 +318,19 @@ export default function ChatWindow({ friendId, currentUserId }) {
       {/* Top Bar */}
       <div className="h-20 border-b border-border/50 bg-card/20 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center space-x-4">
-          <Link href="/dashboard" className="lg:hidden p-2 -ml-2 hover:bg-accent rounded-full">
+          <Link
+            href="/dashboard"
+            className="lg:hidden p-2 -ml-2 hover:bg-accent rounded-full"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <Avatar className="h-12 w-12 border-2 border-primary/10 shadow-sm ring-1 ring-border">
             <AvatarFallback className="bg-primary text-primary-foreground text-base font-bold uppercase">
-              {isGroup ? <Users className="h-6 w-6" /> : friend?.username?.substring(0, 2)}
+              {isGroup ? (
+                <Users className="h-6 w-6" />
+              ) : (
+                friend?.username?.substring(0, 2)
+              )}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
@@ -288,12 +338,18 @@ export default function ChatWindow({ friendId, currentUserId }) {
               {friend?.username}
             </h2>
             <div className="flex items-center space-x-1.5">
-              <span className={cn(
-                "h-2 w-2 rounded-full shadow-sm",
-                isGroup ? "bg-primary" : "bg-green-500 shadow-green-500/50"
-              )} />
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full shadow-sm",
+                  isGroup
+                    ? "bg-primary"
+                    : "bg-green-500 shadow-green-500/50"
+                )}
+              />
               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {isGroup ? `${friend?.members?.length || 0} Members` : "Online"}
+                {isGroup
+                  ? `${friend?.members?.length || 0} Members`
+                  : "Online"}
               </span>
             </div>
           </div>
@@ -320,21 +376,48 @@ export default function ChatWindow({ friendId, currentUserId }) {
             <MessageBubble
               key={msg._id}
               message={msg}
-              isOwn={msg.senderId === currentUserId || (msg.senderId?._id === currentUserId) || (typeof msg.senderId === 'string' && msg.senderId === currentUserId)}
+              isOwn={
+                msg.senderId === currentUserId ||
+                msg.senderId?._id === currentUserId ||
+                (typeof msg.senderId === "string" &&
+                  msg.senderId === currentUserId)
+              }
             />
           ))}
+
+          {/* Typing Indicator */}
+          {Object.keys(typingUsers).length > 0 && (
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground italic ml-4 animate-pulse">
+              <div className="flex space-x-1">
+                <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce"></span>
+              </div>
+              <span>
+                {isGroup
+                  ? `${Object.values(typingUsers).join(", ")} ${
+                      Object.keys(typingUsers).length > 1 ? "are" : "is"
+                    } typing...`
+                  : "typing..."}
+              </span>
+            </div>
+          )}
+
           <div ref={scrollRef} className="h-4" />
         </div>
       </ScrollArea>
 
       {/* Input Area */}
       <div className="p-6 bg-card/20 backdrop-blur-md border-t border-border/50">
-        <form onSubmit={handleSend} className="flex items-center space-x-3 max-w-4xl mx-auto">
+        <form
+          onSubmit={handleSend}
+          className="flex items-center space-x-3 max-w-4xl mx-auto"
+        >
           <div className="flex-1 relative">
             <Input
               placeholder="Type your message..."
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={handleInputChange}
               className="h-12 bg-background/50 border-border/50 pr-12 focus:ring-primary/20 transition-all rounded-lg"
             />
           </div>
@@ -344,7 +427,11 @@ export default function ChatWindow({ friendId, currentUserId }) {
             className="h-12 w-12 rounded-lg shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
             disabled={sending || !text.trim()}
           >
-            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {sending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
           </Button>
         </form>
       </div>
