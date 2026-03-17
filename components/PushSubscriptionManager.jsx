@@ -13,18 +13,11 @@ export default function PushSubscriptionManager() {
       const supported = 'serviceWorker' in navigator && 'PushManager' in window;
       setIsSupported(supported);
       setPermission(Notification.permission);
-      
-      if (!supported) {
-        console.warn("Push notifications are not supported in this browser.");
-      } else {
-        console.log("Push notifications are supported. Current permission:", Notification.permission);
-      }
     };
 
     checkSupport();
 
     if (!VAPID_PUBLIC_KEY) {
-      console.error("CRITICAL: NEXT_PUBLIC_VAPID_PUBLIC_KEY is missing from environment variables.");
       return;
     }
 
@@ -36,50 +29,37 @@ export default function PushSubscriptionManager() {
         const registration = await navigator.serviceWorker.register('/sw.js', {
           scope: '/'
         });
-        console.log('Service Worker registered successfully:', registration.scope);
 
         // 2. Wait for registration to be ready
         await navigator.serviceWorker.ready;
 
         // 3. Check for existing subscription
         let subscription = await registration.pushManager.getSubscription();
-        console.log('Existing subscription found:', subscription ? "Yes" : "No");
 
         if (!subscription) {
           // 4. Request Permission if not already granted
           if (Notification.permission === 'default') {
-            console.log('Requesting notification permission...');
             const result = await Notification.requestPermission();
             setPermission(result);
             if (result !== 'granted') {
-              console.warn('Notification permission denied by user.');
               return;
             }
           }
 
           // 5. Subscribe to Push Service
-          console.log('Subscribing to push service with key:', VAPID_PUBLIC_KEY.substring(0, 10) + "...");
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
           });
 
           // 6. Send subscription to your server
-          const res = await fetch('/api/user/push-subscribe', {
+          await fetch('/api/user/push-subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ subscription })
           });
-
-          if (res.ok) {
-            console.log('Successfully saved push subscription to server.');
-          } else {
-            const err = await res.json();
-            console.error('Failed to save push subscription to server:', err.error);
-          }
         }
       } catch (error) {
-        console.error('Error during push registration/subscription:', error);
       }
     };
 

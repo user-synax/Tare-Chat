@@ -22,6 +22,7 @@ import {
 import IncomingCallDialog from "./IncomingCallDialog";
 import VoiceCallModal from "./VoiceCallModal";
 import Pusher from "pusher-js";
+import { toast } from "react-hot-toast";
 
 export default function ChatWindow({ friendId, currentUserId }) {
   const searchParams = useSearchParams();
@@ -42,6 +43,11 @@ export default function ChatWindow({ friendId, currentUserId }) {
   const [callStatus, setCallStatus] = useState("idle");
   const [isMuted, setIsMuted] = useState(false);
 
+  const callStatusRef = useRef(callStatus);
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
+
   const scrollRef = useRef(null);
   const remoteAudioRef = useRef(null);
 
@@ -53,27 +59,24 @@ export default function ChatWindow({ friendId, currentUserId }) {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
     });
 
-    const channelName = isGroup
+    // Channel for chat messages
+    const chatChannelName = isGroup
       ? `group-${friendId}`
       : `chat-${[currentUserId, friendId].sort().join("-")}`;
+    const chatChannel = pusher.subscribe(chatChannelName);
 
-    const channel = pusher.subscribe(channelName);
-
-    channel.bind("new-message", (newMessage) => {
+    chatChannel.bind("new-message", (newMessage) => {
       setMessages((prev) => {
         const exists = prev.some(
           (m) => m._id.toString() === newMessage._id.toString()
         );
-        if (exists) {
-          return prev;
-        }
+        if (exists) return prev;
         return [...prev, newMessage];
       });
     });
 
-    channel.bind("typing", (data) => {
+    chatChannel.bind("typing", (data) => {
       if (data.userId === currentUserId) return;
-
       setTypingUsers((prev) => {
         const newTypingUsers = { ...prev };
         if (data.isTyping) {
@@ -85,8 +88,33 @@ export default function ChatWindow({ friendId, currentUserId }) {
       });
     });
 
+    chatChannel.bind("reaction-update", (data) => {
+      setMessages((prev) => {
+        return prev.map((m) => {
+          if (m._id.toString() === data.messageId.toString()) {
+            return { ...m, reactions: data.reactions };
+          }
+          return m;
+        });
+      });
+    });
+
+    // Channel for user-specific events like call declining
+    const userChannelName = `user-${currentUserId}`;
+    const userChannel = pusher.subscribe(userChannelName);
+
+    userChannel.bind("call-declined", (data) => {
+      if (callStatusRef.current === "calling") {
+        setTimeout(() => {
+          setCallStatus("idle");
+          toast.error(`${data.declinedByName || "Someone"} declined your call.`);
+        }, 500);
+      }
+    });
+
     return () => {
-      pusher.unsubscribe(channelName);
+      pusher.unsubscribe(chatChannelName);
+      pusher.unsubscribe(userChannelName);
       pusher.disconnect();
     };
   }, [currentUserId, friendId, isGroup]);
@@ -265,10 +293,22 @@ export default function ChatWindow({ friendId, currentUserId }) {
     }
   };
 
-  const handleRejectCall = () => {
+  const handleRejectCall = async () => {
     if (incomingCall) {
       incomingCall.close();
       setIncomingCall(null);
+
+      try {
+        await fetch("/api/voice/decline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            callerId: incomingCall.peer.replace("tare-chat-", ""),
+            calleeId: currentUserId,
+          }),
+        });
+      } catch (err) {
+      }
     }
   };
 
@@ -382,6 +422,9 @@ export default function ChatWindow({ friendId, currentUserId }) {
                 (typeof msg.senderId === "string" &&
                   msg.senderId === currentUserId)
               }
+              currentUserId={currentUserId}
+              receiverId={!isGroup ? friendId : null}
+              groupId={isGroup ? friendId : null}
             />
           ))}
 

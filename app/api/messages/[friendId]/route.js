@@ -27,7 +27,8 @@ export async function GET(req, { params }) {
     if (isGroup) {
       messages = await Message.find({ groupId: friendId })
         .populate("senderId", "username")
-        .sort({ createdAt: 1 });
+        .sort({ createdAt: 1 })
+        .lean();
     } else {
       messages = await Message.find({
         $or: [
@@ -36,7 +37,8 @@ export async function GET(req, { params }) {
         ],
       })
         .populate("senderId", "username")
-        .sort({ createdAt: 1 });
+        .sort({ createdAt: 1 })
+        .lean();
     }
 
     // Mark messages as read
@@ -54,9 +56,14 @@ export async function GET(req, { params }) {
       );
     }
 
-    return NextResponse.json({ messages }, { status: 200 });
+    // Ensure reactions field exists for all messages
+    const processedMessages = messages.map(msg => ({
+      ...msg,
+      reactions: msg.reactions || []
+    }));
+
+    return NextResponse.json({ messages: processedMessages }, { status: 200 });
   } catch (error) {
-    console.error("Fetch messages error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

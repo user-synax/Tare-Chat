@@ -16,7 +16,6 @@ export async function POST(req) {
     }
 
     const { receiverId, groupId, text } = await req.json();
-    console.log("Received send request:", { receiverId, groupId, text: text?.substring(0, 10) + "..." });
 
     if ((!receiverId && !groupId) || !text) {
       return NextResponse.json({ error: "Receiver/Group and text are required" }, { status: 400 });
@@ -43,10 +42,7 @@ export async function POST(req) {
       messageData.groupId = groupId;
     }
 
-    console.log("Creating message with data:", JSON.stringify(messageData));
-
     const message = await Message.create(messageData);
-    console.log("Message created successfully:", message._id);
     
     // Fetch the populated message to return
     const populatedMessage = await Message.findById(message._id)
@@ -101,11 +97,6 @@ export async function POST(req) {
 
     return NextResponse.json({ message: populatedMessage }, { status: 201 });
   } catch (error) {
-    console.error("Detailed Send message error:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

@@ -32,9 +32,8 @@ export async function POST(req) {
       await user.save();
     }
 
-    return NextResponse.json({ message: "Subscribed to push notifications" }, { status: 200 });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Push subscribe error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

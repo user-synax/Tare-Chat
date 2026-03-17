@@ -31,7 +31,6 @@ export default function Sidebar({ className }) {
         setFriends(data.friends);
       }
     } catch (err) {
-      console.error("Failed to fetch friends:", err);
     }
   };
 
@@ -43,7 +42,6 @@ export default function Sidebar({ className }) {
         setGroups(data.groups);
       }
     } catch (err) {
-      console.error("Failed to fetch groups:", err);
     }
   };
 
@@ -95,7 +93,6 @@ export default function Sidebar({ className }) {
         fetchGroups();
       }
     } catch (err) {
-      console.error("Failed to create group:", err);
     }
   };
 

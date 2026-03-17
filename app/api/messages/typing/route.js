@@ -44,7 +44,6 @@ export async function POST(req) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Typing indicator error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
