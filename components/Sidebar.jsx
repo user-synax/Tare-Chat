@@ -108,14 +108,14 @@ export default function Sidebar({ className }) {
   };
 
   return (
-    <div className={cn("flex flex-col h-full border-r border-border bg-card/30 backdrop-blur-sm w-full lg:w-80 min-w-0 lg:min-w-80", className)}>
+    <div className={cn("flex flex-col h-full border-r border-border bg-card w-full lg:w-80 min-w-0 lg:min-w-80", className)}>
       <div className="p-6">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:scale-110 duration-300">
+            <div className="p-2 rounded-lg bg-primary text-primary-foreground">
               <MessageCircle className="h-5 w-5" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">Tare Chat</h1>
+            <h1 className="text-xl font-normal tracking-tight">Tare Chat</h1>
           </div>
           <div className="flex items-center space-x-1">
             <AccountSection />
@@ -124,7 +124,7 @@ export default function Sidebar({ className }) {
               size="icon"
               onClick={handleLogout}
               title="Logout"
-              className="h-10 w-10 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all"
+              className="h-10 w-10 rounded-sm hover:bg-destructive/10 hover:text-destructive transition-all"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -138,12 +138,12 @@ export default function Sidebar({ className }) {
               placeholder="Search username..."
               value={searchUsername}
               onChange={(e) => setSearchUsername(e.target.value)}
-              className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+              className="pl-10 h-11 bg-background border-border focus:border-primary transition-all"
             />
           </div>
           <Button
             type="submit"
-            className="w-full h-11 shadow-md shadow-primary/10 transition-all hover:translate-y-[-1px]"
+            className="w-full h-11"
             disabled={loading}
           >
             <UserPlus className="h-4 w-4 mr-2" />
@@ -153,10 +153,10 @@ export default function Sidebar({ className }) {
         </form>
       </div>
 
-      <Separator className="bg-border/50" />
+      <Separator className="bg-border" />
 
       <div className="px-4 py-4 flex items-center justify-between">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest px-2">
           Groups
         </p>
         <CreateGroupDialog friends={friends} onCreate={handleCreateGroup} />
@@ -166,10 +166,10 @@ export default function Sidebar({ className }) {
         <GroupList groups={groups} />
       </ScrollArea>
 
-      <Separator className="bg-border/50" />
+      <Separator className="bg-border" />
 
       <div className="px-4 py-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-2 mb-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest px-2 mb-2">
           Friends
         </p>
       </div>
@@ -178,20 +178,20 @@ export default function Sidebar({ className }) {
         <FriendList friends={friends} />
       </ScrollArea>
 
-      <Separator className="bg-border/50" />
+      <Separator className="bg-border" />
       
-      <div className="p-4 bg-card/40 backdrop-blur-md">
+      <div className="p-4 bg-card">
         <div className="flex items-center space-x-3 px-2">
-          <Avatar className="h-10 w-10 border border-primary/20">
-            <AvatarFallback className="bg-primary/5 text-primary text-sm font-bold uppercase">
+          <Avatar className="h-10 w-10 border border-border">
+            <AvatarFallback className="bg-primary/5 text-primary text-sm font-normal uppercase">
               {currentUser.username.substring(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold truncate">
+            <span className="text-sm font-medium truncate">
               {currentUser.username}
             </span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
               Online
             </span>
           </div>
