@@ -30,7 +30,7 @@ export async function PATCH(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { username, password } = await req.json();
+    const { username, email, password } = await req.json();
     await connectDB();
 
     const updateData = {};
@@ -41,6 +41,15 @@ export async function PATCH(req) {
         return NextResponse.json({ error: "Username already taken" }, { status: 400 });
       }
       updateData.username = username;
+    }
+
+    if (email) {
+      // Check if email is already taken
+      const existingEmail = await User.findOne({ email, _id: { $ne: session.userId } });
+      if (existingEmail) {
+        return NextResponse.json({ error: "Email already taken" }, { status: 400 });
+      }
+      updateData.email = email.toLowerCase();
     }
 
     if (password) {
