@@ -47,7 +47,7 @@ export default function MessageBubble({ message, isOwn, currentUserId, receiverI
         isOwn ? "items-end" : "items-start"
       )}>
         {!isOwn && message.groupId && (
-          <span className="text-[10px] font-semibold text-muted-foreground ml-2 mb-1 uppercase tracking-wider">
+          <span className="text-[10px] font-medium text-muted-foreground ml-2 mb-1 uppercase tracking-wider">
             {senderName}
           </span>
         )}
@@ -63,12 +63,12 @@ export default function MessageBubble({ message, isOwn, currentUserId, receiverI
                 <Smile className="h-4 w-4" />
               </Button>
               {showPicker && (
-                <div className="absolute bottom-full right-0 mb-2 p-1 bg-background border border-border rounded-full shadow-lg flex items-center gap-1 z-50">
+                <div className="absolute bottom-full right-0 mb-2 p-1 bg-background border border-border rounded-sm flex items-center gap-1 z-50">
                   {EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
                       onClick={() => handleReact(emoji)}
-                      className="hover:scale-125 transition-transform p-1.5 rounded-full hover:bg-muted"
+                      className="hover:scale-125 transition-transform p-1.5 rounded-sm hover:bg-muted"
                     >
                       {emoji}
                     </button>
@@ -80,7 +80,7 @@ export default function MessageBubble({ message, isOwn, currentUserId, receiverI
           
           <div
             className={cn(
-              "px-4 py-2 rounded-lg text-sm shadow-sm transition-all hover:shadow-md",
+              "px-4 py-2 rounded-sm text-sm transition-all",
               isOwn
                 ? "bg-primary text-primary-foreground rounded-tr-none"
                 : "bg-secondary text-secondary-foreground rounded-tl-none"
@@ -108,12 +108,12 @@ export default function MessageBubble({ message, isOwn, currentUserId, receiverI
                 <Smile className="h-4 w-4" />
               </Button>
               {showPicker && (
-                <div className="absolute bottom-full left-0 mb-2 p-1 bg-background border border-border rounded-full shadow-lg flex items-center gap-1 z-50">
+                <div className="absolute bottom-full left-0 mb-2 p-1 bg-background border border-border rounded-sm flex items-center gap-1 z-50">
                   {EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
                       onClick={() => handleReact(emoji)}
-                      className="hover:scale-125 transition-transform p-1.5 rounded-full hover:bg-muted"
+                      className="hover:scale-125 transition-transform p-1.5 rounded-sm hover:bg-muted"
                     >
                       {emoji}
                     </button>
@@ -136,7 +136,7 @@ export default function MessageBubble({ message, isOwn, currentUserId, receiverI
                   key={emoji}
                   onClick={() => handleReact(emoji)}
                   className={cn(
-                    "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border transition-all",
+                    "flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs border transition-all",
                     hasReacted 
                       ? "bg-primary/10 border-primary text-primary" 
                       : "bg-background border-border hover:border-primary/50"
