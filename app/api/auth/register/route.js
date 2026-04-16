@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
-    const { username, password } = await req.json();
+    const { username, email, password } = await req.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -24,9 +24,21 @@ export async function POST(req) {
       );
     }
 
+    // Check email uniqueness only if email is provided
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: "Email already exists" },
+          { status: 400 }
+        );
+      }
+    }
+
     const hashedPassword = await hashPassword(password);
     const user = await User.create({
       username,
+      email: email || undefined,
       password: hashedPassword,
     });
 
@@ -35,8 +47,14 @@ export async function POST(req) {
       { status: 201 }
     );
   } catch (error) {
+    console.error("Register error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+    });
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: error.message || "Internal Server Error" },
       { status: 500 }
     );
   }
