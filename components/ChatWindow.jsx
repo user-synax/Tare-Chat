@@ -324,7 +324,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-background/50">
+      <div className="flex-1 flex flex-col items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
         <p className="mt-4 text-sm text-muted-foreground animate-pulse">
           Loading conversation...
@@ -334,7 +334,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background/50 relative">
+    <div className="flex-1 flex flex-col h-full bg-background relative">
       <audio ref={remoteAudioRef} autoPlay />
 
       {incomingCall && (
@@ -356,16 +356,16 @@ export default function ChatWindow({ friendId, currentUserId }) {
       )}
 
       {/* Top Bar */}
-      <div className="h-20 border-b border-border/50 bg-card/20 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
+      <div className="h-20 border-b border-border bg-card px-6 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center space-x-4">
           <Link
             href="/dashboard"
-            className="lg:hidden p-2 -ml-2 hover:bg-accent rounded-full"
+            className="lg:hidden p-2 -ml-2 hover:bg-accent rounded-sm"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <Avatar className="h-12 w-12 border-2 border-primary/10 shadow-sm ring-1 ring-border">
-            <AvatarFallback className="bg-primary text-primary-foreground text-base font-bold uppercase">
+          <Avatar className="h-12 w-12 border border-border">
+            <AvatarFallback className="bg-primary text-primary-foreground text-base font-normal uppercase">
               {isGroup ? (
                 <Users className="h-6 w-6" />
               ) : (
@@ -374,19 +374,19 @@ export default function ChatWindow({ friendId, currentUserId }) {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <h2 className="text-base font-bold tracking-tight">
+            <h2 className="text-base font-medium tracking-tight">
               {friend?.username}
             </h2>
             <div className="flex items-center space-x-1.5">
               <span
                 className={cn(
-                  "h-2 w-2 rounded-full shadow-sm",
+                  "h-2 w-2 rounded-full",
                   isGroup
                     ? "bg-primary"
-                    : "bg-green-500 shadow-green-500/50"
+                    : "bg-green-500"
                 )}
               />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
                 {isGroup
                   ? `${friend?.members?.length || 0} Members`
                   : "Online"}
@@ -400,7 +400,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
             <Button
               size="icon"
               variant="ghost"
-              className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+              className="h-10 w-10 rounded-sm hover:bg-primary/10 hover:text-primary transition-all"
               onClick={handleStartCall}
             >
               <Phone className="h-5 w-5" />
@@ -451,7 +451,7 @@ export default function ChatWindow({ friendId, currentUserId }) {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-6 bg-card/20 backdrop-blur-md border-t border-border/50">
+      <div className="p-6 bg-card border-t border-border">
         <form
           onSubmit={handleSend}
           className="flex items-center space-x-3 max-w-4xl mx-auto"
@@ -461,13 +461,13 @@ export default function ChatWindow({ friendId, currentUserId }) {
               placeholder="Type your message..."
               value={text}
               onChange={handleInputChange}
-              className="h-12 bg-background/50 border-border/50 pr-12 focus:ring-primary/20 transition-all rounded-lg"
+              className="h-12 bg-background border-border pr-12 focus:ring-primary/20 transition-all rounded-sm"
             />
           </div>
           <Button
             type="submit"
             size="icon"
-            className="h-12 w-12 rounded-lg shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            className="h-12 w-12 rounded-sm"
             disabled={sending || !text.trim()}
           >
             {sending ? (
