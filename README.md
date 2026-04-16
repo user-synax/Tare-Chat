@@ -100,7 +100,7 @@ Make sure you have these installed:
 ### 1 · Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/tare-chat.git
+git clone https://github.com/user-synax/tare-chat.git
 cd tare-chat
 ```
 
