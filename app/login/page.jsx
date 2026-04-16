@@ -44,15 +44,14 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-8">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent)] pointer-events-none" />
-      <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur-xl shadow-2xl relative">
+      <Card className="w-full max-w-md border-border bg-card relative">
         <CardHeader className="space-y-4 pt-10 text-center">
           <div className="flex justify-center">
-            <div className="p-4 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/20">
+            <div className="p-4 rounded-2xl bg-primary text-primary-foreground">
               <MessageCircle className="h-8 w-8" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Welcome back</CardTitle>
+          <CardTitle className="text-3xl font-normal tracking-tight">Welcome back</CardTitle>
           <p className="text-sm text-muted-foreground">Sign in to your account</p>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
@@ -65,7 +64,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="h-12 bg-background/50"
+                className="h-12 bg-background"
               />
             </div>
             <div className="space-y-2">
@@ -77,23 +76,23 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 bg-background/50"
+                className="h-12 bg-background"
               />
             </div>
             {error && (
-              <p className="text-sm text-destructive font-medium bg-destructive/10 p-3 rounded-lg border border-destructive/20 text-center">
+              <p className="text-sm text-destructive font-medium bg-destructive/10 p-3 rounded-sm border border-destructive/20 text-center">
                 {error}
               </p>
             )}
-            <Button type="submit" className="w-full h-12 text-base shadow-lg shadow-primary/10" disabled={loading}>
+            <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
               {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : "Sign In"}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center pb-10 border-t border-border/50 pt-6">
+        <CardFooter className="flex justify-center pb-10 border-t border-border pt-6">
           <p className="text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link href="/register" className="text-primary font-semibold hover:underline transition-all">
+            <Link href="/register" className="text-green-link font-medium hover:underline transition-all">
               Sign up
             </Link>
           </p>
