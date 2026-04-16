@@ -203,7 +203,7 @@ tare-chat/
 
 ### Deploy to Vercel (recommended)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/tare-chat)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/user-synax/tare-chat)
 
 1. Click the button above or import the repo from your Vercel dashboard.
 2. Add all environment variables from `.env.local` to **Vercel → Project → Settings → Environment Variables**.
@@ -256,7 +256,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](./LICEN
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:24243e,50:302b63,100:0f0c29&height=120&section=footer" width="100%"/>
 
-**Built with 💜 by [Ayush](https://github.com/your-username)**
+**Built with 💜 by [Ayush](https://github.com/user-synax)**
 
 ⭐ If you found this useful, please consider giving it a star!
 
