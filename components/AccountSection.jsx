@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 export default function AccountSection() {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -32,6 +33,7 @@ export default function AccountSection() {
       if (res.ok) {
         setUser(data.user);
         setUsername(data.user.username);
+        setEmail(data.user.email || "");
       }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
@@ -61,7 +63,8 @@ export default function AccountSection() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          username: username, 
+          username: username,
+          email: email,
         }),
       });
       
@@ -88,15 +91,15 @@ export default function AccountSection() {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+          className="h-10 w-10 rounded-sm hover:bg-primary/10 hover:text-primary transition-all"
           title="Account Settings"
         >
           <Settings className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-card border-border/50 shadow-2xl">
+      <DialogContent className="sm:max-w-[425px] bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center space-x-2">
+          <DialogTitle className="text-2xl font-normal flex items-center space-x-2">
             <User className="h-6 w-6 text-primary" />
             <span>My Account</span>
           </DialogTitle>
@@ -110,14 +113,14 @@ export default function AccountSection() {
         ) : (
           <form onSubmit={handleUpdate} className="space-y-6 py-4">
             <div className="flex flex-col items-center space-y-4 mb-6">
-              <Avatar className="h-24 w-24 border-4 border-primary/10 shadow-xl">
-                <AvatarFallback className="bg-primary/5 text-primary text-3xl font-bold uppercase">
+              <Avatar className="h-24 w-24 border border-border">
+                <AvatarFallback className="bg-primary/5 text-primary text-3xl font-normal uppercase">
                   {user?.username?.substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center">
-                <h3 className="text-lg font-bold">{user?.username}</h3>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
+                <h3 className="text-lg font-medium">{user?.username}</h3>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
                   Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
                 </p>
               </div>
@@ -125,20 +128,31 @@ export default function AccountSection() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-semibold ml-1">Username</Label>
+                <Label htmlFor="username" className="text-sm font-medium ml-1">Username</Label>
                 <Input
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                  className="h-11 bg-background border-border focus:border-primary transition-all"
                   placeholder="Your username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium ml-1">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11 bg-background border-border focus:border-primary transition-all"
+                  placeholder="your@email.com"
                 />
               </div>
             </div>
 
             {message.text && (
               <div className={cn(
-                "flex items-center space-x-2 p-3 rounded-lg text-xs font-medium animate-in fade-in slide-in-from-top-1",
+                "flex items-center space-x-2 p-3 rounded-sm text-xs font-medium animate-in fade-in slide-in-from-top-1",
                 message.type === "success" ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"
               )}>
                 {message.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
@@ -149,7 +163,7 @@ export default function AccountSection() {
             <DialogFooter>
               <Button 
                 type="submit" 
-                className="w-full h-11 shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px]"
+                className="w-full h-11"
                 disabled={loading}
               >
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
