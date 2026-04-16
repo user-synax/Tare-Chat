@@ -51,11 +51,22 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Supabase-specific colors
+        'green-link': "hsl(var(--green-link))",
+        'green-border': "hsl(var(--green-border))",
+        'border-dark': "hsl(var(--border-dark))",
+        'border-mid': "hsl(var(--border-mid))",
+        'border-light': "hsl(var(--border-light))",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius-lg)",
+        md: "var(--radius-card)",
+        sm: "var(--radius)",
+        pill: "var(--radius-pill)",
+      },
+      fontFamily: {
+        circular: ['Circular', 'custom-font', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['Source Code Pro', 'Office Code Pro', 'Menlo', 'monospace'],
       },
       keyframes: {
         "accordion-down": {
